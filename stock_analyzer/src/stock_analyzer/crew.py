@@ -1,63 +1,97 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import LLM, Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+from crewai_tools import SerperDevTool, FileReadTool
+from .tools.psx_tool import PSXStockTool
+from stock_analyzer.tools.ledger_reader import read_portfolio_ledger
+
+# We'll use a placeholder for your custom PSX tool for now
+# from stock_analyzer.tools.psx_tool import PSXStockTool
+
+# Use the big brain for the final strategy
+smart_llm = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    )
+
+# Use the fast, high-limit model for data gathering
+fast_llm = LLM(
+    model="groq/llama-3.1-8b-instant",
+    )
 
 @CrewBase
-class StockAnalyzer():
-    """StockAnalyzer crew"""
+class StockAnalyzerCrew():
+    """StockAnalyzer crew for Macro and Portfolio analysis"""
 
-    agents: list[BaseAgent]
-    tasks: list[Task]
+    # These point to your YAML files automatically
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
-    def researcher(self) -> Agent:
+    def portfolio_auditor(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
+            config=self.agents_config['portfolio_auditor'],
+            # tools=[FileReadTool(file_path='ledger.json')], # To read your ledger.json/csv
+            tools=[read_portfolio_ledger], # Using our custom tool to read the ledger
+            verbose=True,
+            llm=fast_llm,  # Pass it here!,
+            allow_delegation=False,
+            
+        )
+
+    @agent
+    def macro_economist(self) -> Agent:
+        return Agent(
+            config=self.agents_config['macro_economist'],
+            tools=[SerperDevTool()], # To check fuel, war, and global news
             verbose=True
         )
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def market_analyst(self) -> Agent:
         return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
+            config=self.agents_config['market_analyst'],
+            tools=[PSXStockTool()], # We will build this next
             verbose=True
         )
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
+    @agent
+    def investment_strategist(self) -> Agent:
+        return Agent(
+            config=self.agents_config['investment_strategist'],
+            verbose=True,
+            llm=smart_llm,  # Pass the big brain here!
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def audit_ledger_task(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
-            output_file='report.md'
+            config=self.tasks_config['audit_ledger_task']
+        )
+
+    @task
+    def macro_analysis_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['macro_analysis_task']
+        )
+
+    @task
+    def market_valuation_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['market_valuation_task']
+        )
+
+    @task
+    def strategic_advice_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['strategic_advice_task']
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the StockAnalyzer crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
-
         return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
-            process=Process.sequential,
+            agents=self.agents, # Automatically collects methods marked with @agent
+            tasks=self.tasks,   # Automatically collects methods marked with @task
+            process=Process.sequential, # One by one: Audit -> Macro -> Market -> Strategy
             verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
+            max_rpm=1
         )

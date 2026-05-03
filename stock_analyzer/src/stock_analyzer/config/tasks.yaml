@@ -1,17 +1,43 @@
-research_task:
+audit_ledger_task:
   description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is {current_year}.
+    Analyze the user's transaction ledger using the available file reading tool.
+    Calculate the total quantities and weighted average costs for every stock held.
+    Do not provide any extra parameters to the tool; just call it to get the data.
+    Do not worry about parameters; call it with empty input if needed.
   expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
+    A detailed list of ticker symbols, total shares owned, and their 
+    weighted average purchase price.
+  agent: portfolio_auditor
 
-reporting_task:
+macro_analysis_task:
   description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
+    Research current external factors:
+    1. Check latest fuel/oil price trends.
+    2. Monitor for geopolitical tensions (war/conflict) and interest rate changes.
+    3. Identify which sectors (e.g., Electric, Tech, Cement) will benefit or 
+       suffer from these specific conditions.
   expected_output: >
-    A fully fledged report with the main topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
+    A macro-economic alert report identifying 'Bullish' and 'Bearish' sectors 
+    based on current world events.
+  agent: macro_economist
+
+market_valuation_task:
+  description: >
+    For every ticker in the portfolio, get the live price and the 
+    most recent company-specific news from the last 7 days.
+  expected_output: >
+    A list of holdings with current market value and recent stock-specific news.
+  agent: market_analyst
+
+strategic_advice_task:
+  description: >
+    Final Analysis:
+    1. Compare the Macro Report with the User's Portfolio. 
+       (e.g., If the user owns 'Cement' but fuel prices are rising, suggest caution).
+    2. Calculate P/L for each stock.
+    3. Provide a final "Action Plan" (e.g., 'Buy more Electric stocks due to 
+       expected price hikes' or 'Sell Tech due to rising interest rates').
+  expected_output: >
+    A comprehensive investment strategy memo with clear Buy/Sell/Hold 
+    recommendations justified by both macro and micro data.
+  agent: investment_strategist
